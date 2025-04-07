@@ -13,11 +13,19 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Examples',
+        text: 'node',
         items: [
-          { text: 'Markdown Examples', link: '/markdown-examples' },
-          { text: 'Runtime API Examples', link: '/api-examples' }
+          { text: 'node', link: '/node' },
+          { text: 'api-examples', link: '/api-examples' }
         ]
+      },
+      {
+        text: 'nest',
+        items: [{ text: 'nest', link: '/nest' }]
+      },
+      {
+        text: 'there',
+        items: [{ text: 'perspective-camera', link: '/there/perspective-camera' }]
       }
     ],
 
