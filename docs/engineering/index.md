@@ -108,3 +108,47 @@ echo "pnpm dlx commitlint --edit `$1" > .husky/commit-msg
 ```
 
 4. 配置可视化的提交提示
+
+## 模块化与组件化
+
+### 模块化
+
+- CommonJS
+  主要用于 Node.js（服务器端）同步加载模块（适合磁盘读取，不适合浏览器网络请求）
+
+  ```tsx
+  // 导出模块（module.js）
+  module.exports = {
+    name: 'Alice',
+    sayHello: function () {
+      console.log('Hello!')
+    }
+  }
+  ```
+
+  ```tsx
+  // 导入模块（main.js）
+  const obj = require('./module.js')
+  obj.sayHello() // 输出: Hello!
+  ```
+
+  - 导出的值是拷贝
+
+- AMD
+  主要用于浏览器端异步加载模块
+
+- CMD
+  - 类似 AMD，但更贴近 CommonJS 的写法
+- ES6 Module
+  - export default 导出默认模块
+  - 现代浏览器和 Node.js 均支持
+  - 静态化（编译时确定依赖），支持静态分析和摇树优化（Tree Shaking）。
+  - 导出的值是引用（修改原模块会影响导入的值）。
+  - 浏览器中需用 <script type="module"> 标签。
+
+### 组件化
+
+- 组件化是一种开发思想，将 UI 拆分成独立的、可复用的组件，每个组件只关注 UI 的一个方面。
+- 组件 = 独立的功能块（HTML + CSS + JS）
+
+### 组件库
