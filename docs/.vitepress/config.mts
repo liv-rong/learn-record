@@ -2,6 +2,9 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  sitemap: {
+    hostname: 'https://example.com'
+  },
   title: 'learn-records',
   description: 'Record and share problems encountered at work',
   themeConfig: {
@@ -16,12 +19,26 @@ export default defineConfig({
         text: 'node',
         items: [
           { text: 'node', link: '/node' },
+
           { text: 'api-examples', link: '/api-examples' }
         ]
       },
       {
+        text: 'react',
+        items: [{ text: 'react', link: '/react/react' }]
+      },
+      {
+        text: 'engineering',
+        items: [{ text: 'engineering', link: '/engineering' }]
+      },
+      {
         text: 'nest',
-        items: [{ text: 'nest', link: '/nest' }]
+        items: [
+          { text: 'nest', link: '/nest' },
+          { text: 'prisma', link: '/nest/prisma' },
+          { text: 'redis', link: '/nest/redis' },
+          { text: 'swagger', link: '/nest/swagger' }
+        ]
       },
       {
         text: 'there',
