@@ -23,6 +23,35 @@
 - 代码规范统一：通过 ESLint + Prettier + Husky 强制约束代码风格，避免因缩进、命名等细节争议浪费开发时间。
 - 协作流程标准化：明确 Git 分支策略（如简化版 Git Flow）、Commit 信息格式（Commitizen 规范），确保代码历史可追溯。
 
+### .editorconfig
+
+1. 代码格式化和文件风格的规则 让不同的开发者在使用不同的编辑器时，都能够保持一致的代码风格
+2. .editorconfig 文件主要配置以下几类属性：缩进风格、缩进大小、换行符、字符编码、行末空白、文件末尾新行等。
+
+```tsx
+root = true //指定此文件为根配置文件，子目录中的其他 .editorconfig 文件将被忽略。
+
+[*] // [pattern] - 文件匹配模式 [*.js] 匹配所有 JavaScript 文件，[*.{html,css}] 匹配 HTML 和 CSS 文件
+
+charset = utf-8 //编码
+end_of_line = lf //：使用换行符 LF（Line Feed），适用于 Unix 和 Linux 系统 lf 表示换行符为 Line Feed (\n)，crlf 表示 Carriage Return and Line Feed (\r\n)，cr 表示 Carriage Return (\r)
+indent_size = 2 //缩进大小设置为 2 个空格
+// tab_width = 4 //制表符宽度为 4 个空格
+indent_style = space // 使用空格进行缩进，而不是制表符（Tab）
+insert_final_newline = true //在文件末尾插入一个新行
+trim_trailing_whitespace = true // 删除行尾的空白字符
+max_line_length = 80  //如果设置为 off，则不对行的长度进行限制。
+
+```
+
+#### 为啥需要配置
+
+- .editorconfig 提供文件级别的基础规范控制，适用于所有文件类型；而 Prettier 是代码自动格式化工具，专注于代码风格优化。
+- 基本文件格式规范
+- 避免因编辑器差异导致的代码风格问题
+- 字符编码和换行符的管理
+- 支持非编程语言的文件格式
+
 ### husky
 
 husky 是一个用于简化 Git 钩子（hooks）的设置的工具，允许开发者轻松地在各种 Git 事件触发时运行脚本。例如，在提交之前（pre-commit）、推送之前（pre-push）、或者在提交信息被写入后（commit-msg）等。
@@ -113,42 +142,42 @@ echo "pnpm dlx commitlint --edit `$1" > .husky/commit-msg
 
 ### 模块化
 
-- CommonJS
-  主要用于 Node.js（服务器端）同步加载模块（适合磁盘读取，不适合浏览器网络请求）
+#### CommonJS
 
-  ```tsx
-  // 导出模块（module.js）
-  module.exports = {
-    name: 'Alice',
-    sayHello: function () {
-      console.log('Hello!')
-    }
+- 主要用于 Node.js（服务器端）同步加载模块（适合磁盘读取，不适合浏览器网络请求）
+
+```tsx
+// 导出模块（module.js）
+module.exports = {
+  name: 'Alice',
+  sayHello: function () {
+    console.log('Hello!')
   }
-  ```
+}
+```
 
-  ```tsx
-  // 导入模块（main.js）
-  const obj = require('./module.js')
-  obj.sayHello() // 输出: Hello!
-  ```
+```tsx
+// 导入模块（main.js）
+const obj = require('./module.js')
+obj.sayHello() // 输出: Hello!
+```
 
-  - 导出的值是拷贝
+#### ES6 Module
 
-- AMD
-  主要用于浏览器端异步加载模块
+- export default 导出默认模块
 
-- CMD
-  - 类似 AMD，但更贴近 CommonJS 的写法
-- ES6 Module
-  - export default 导出默认模块
-  - 现代浏览器和 Node.js 均支持
-  - 静态化（编译时确定依赖），支持静态分析和摇树优化（Tree Shaking）。
-  - 导出的值是引用（修改原模块会影响导入的值）。
-  - 浏览器中需用 <script type="module"> 标签。
+- 现代浏览器和 Node.js 均支持
 
-### 组件化
+- 静态化（编译时确定依赖），支持静态分析和摇树优化（Tree Shaking）。
 
-- 组件化是一种开发思想，将 UI 拆分成独立的、可复用的组件，每个组件只关注 UI 的一个方面。
-- 组件 = 独立的功能块（HTML + CSS + JS）
+- 导出的值是引用（修改原模块会影响导入的值）。
 
-### 组件库
+- 浏览器中需用 `<script type="module">`标签。
+
+#### AMD
+
+主要用于浏览器端异步加载模块
+
+#### CMD
+
+- 类似 AMD，但更贴近 CommonJS 的写法

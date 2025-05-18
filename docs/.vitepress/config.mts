@@ -29,7 +29,10 @@ export default defineConfig({
       },
       {
         text: 'engineering',
-        items: [{ text: 'engineering', link: '/engineering' }]
+        items: [
+          { text: 'engineering', link: '/engineering' },
+          { text: 'pnpm', link: '/engineering/pnpm' }
+        ]
       },
       {
         text: 'nest',
