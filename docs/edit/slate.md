@@ -549,3 +549,181 @@ const App = () => {
 
 export default App
 ```
+
+#概念
+
+## Node
+
+- Node 是 slate 中最小的数据单元，它代表一个文本节点或者一个容器节点
+- Node 有两个属性：type 和 children
+- type 是一个字符串，用来标识节点的类型，例如 'paragraph'、'heading'、'image' 等
+- children 是一个数组，用来存储节点的子节点，如果节点是文本节点，那么 children 数组中只有一个元素，即文本内容；如果节点是容器节点，那么 children 数组中可以包含多个子节点
+
+## 接口
+
+- Slate 可以使用纯 JSON 对象。它只需要这些 JSON 对象遵循某些接口即
+
+### 节点
+
+- Editor 包含整个文档内容的根级节点。
+
+- Element 在您的域中具有语义含义的容器节点。
+
+- Text 以及包含文档文本的叶级节点。
+
+eg: 纯文本值
+
+```tsx
+const editor = {
+  children: [
+    {
+      type: 'paragraph',
+      children: [
+        {
+          text: 'A line of text!'
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Editor 节点
+
+- 它封装了文档的所有富文本“内容”
+
+  ```tsx
+  interface Editor {
+  children: Node[]
+  ...
+  }
+  ```
+
+#### Element
+
+- 元素构成了富文本文档的中间层 type 可与区分不同的类型
+
+  ```tsx
+  interface Element {
+    children: Node[]
+  }
+
+  const link = {
+  type: 'link',
+  url: 'https://example.com',
+  children: [...],
+  }
+
+  const quote = {
+  type: 'quote',
+  children: [...],
+  }
+
+  const paragraph = {
+  type: 'paragraph',
+  children: [...],
+  }
+
+  ```
+
+## 位置
+
+-位置是指在使用 Slate 编辑器插入、删除或执行其他操作时，引用文档中特定位置的方式
+
+### Path
+
+- 路径是指向位置的最低层级的方式。每条路径都是一个简单的数字数组，它通过文档树中每个节点在其祖先节点中的索引来引用该节点：
+
+```tsx
+const editor = {
+  children: [
+    {
+      type: 'paragraph',
+      children: [
+        {
+          text: 'A line of text!'
+        }
+      ]
+    }
+  ]
+}
+```
+
+- 叶文本节点的路径为 [0, 0]
+- 例如，要选择编辑器的所有内容，请调用 Transforms.select(editor, [])
+
+### Point
+
+- 点比路径稍微具体一些
+- 包含指向 offset 特定文本节点的内容
+
+```tsx
+interface Point {
+  path: Path
+  offset: number
+}
+const editor = {
+  children: [
+    {
+      type: 'paragraph',
+      children: [
+        {
+          text: 'A line of text!'
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Range
+
+- 范围是两个点之间的区域
+- 范围可以用来选择文档中的内容，或者插入、删除或修改内容
+- 范围的锚点和焦点始终引用文档中的叶级文本节点，而不会引用元素
+
+```tsx
+interface Range {
+  anchor: Point
+  focus: Point
+}
+```
+
+### Selection
+
+- 选择是 Slate 编辑器中当前选定的内容 它是顶层的属性 Editor
+- 选择由一个范围组成，该范围引用文档中的叶级文本节点
+- 选择可以用来选择文档中的内容，或者插入、删除或修改内容
+- 选择是一个特殊的范围
+
+eg: 假设某人当前选择了整个句子：
+
+```tsx
+const editor = {
+  selection: {
+    anchor: { path: [0, 0], offset: 0 },
+    focus: { path: [0, 0], offset: 15 }
+  },
+  children: [
+    {
+      type: 'paragraph',
+      children: [
+        {
+          text: 'A line of text!'
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 操作
+
+- 操作是 Slate 的核心，它们是用于修改文档的方法
+- 操作是可组合的，这意味着你可以将多个操作组合在一起，以创建更复杂的操作
+
+```tsx
+import { Transforms } from 'slate'
+
+Transforms.insertText(editor, 'Hello, world!')
+```

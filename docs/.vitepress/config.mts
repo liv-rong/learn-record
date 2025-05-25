@@ -19,6 +19,7 @@ export default defineConfig({
         text: 'node',
         items: [
           { text: 'node', link: '/node' },
+          { text: 'slate', link: '/edit/slate-概念.md' },
 
           { text: 'api-examples', link: '/api-examples' }
         ]
