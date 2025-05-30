@@ -47,6 +47,10 @@ export default defineConfig({
       {
         text: 'there',
         items: [{ text: 'perspective-camera', link: '/there/perspective-camera' }]
+      },
+      {
+        text: '思维导图',
+        items: [{ text: '绘制一颗漂亮的树', link: '/思维导图/绘制一棵漂亮的树' }]
       }
     ],
 
