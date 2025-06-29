@@ -318,19 +318,414 @@ result: {
 
 ### 1.**路径解析: resolveId**
 
+#### 1.什么是resolveId
+resolveId 就像是 Rollup 的"导航系统"，当代码中出现 import xxx from 'module-a' 时，它负责确定这个 module-a 到底在哪里。
+
+
+#### 2.alias 插件
+```js
+export default function alias(options = {}) {
+  // 规范化 entries 配置
+  const entries = Array.isArray(options.entries) ? options.entries : options ? [options] : []
+
+  return {
+    name: 'alias',
+    resolveId(importee, importer, resolveOptions) {
+      // 1. 检查是否是入口模块（没有 importer）
+      if (!importer) {
+        return null
+      }
+
+      // 2. 查找匹配的别名规则
+      const matchedEntry = entries.find((entry) => {
+        // 支持字符串精确匹配或正则表达式匹配
+        if (typeof entry.find === 'string') {
+          return entry.find === importee
+        } else if (entry.find instanceof RegExp) {
+          return entry.find.test(importee)
+        }
+        return false
+      })
+
+      if (!matchedEntry) {
+        return null
+      }
+
+      // 3. 执行路径替换
+      let updatedId
+      if (typeof matchedEntry.replacement === 'function') {
+        updatedId = matchedEntry.replacement(importee)
+      } else if (matchedEntry.find instanceof RegExp) {
+        updatedId = importee.replace(matchedEntry.find, matchedEntry.replacement)
+      } else {
+        updatedId = matchedEntry.replacement
+      }
+
+      // 4. 规范化路径（处理 ./ 和 ../ 等）
+      updatedId = normalizePath(updatedId)
+
+      // 5. 让其他插件继续处理新路径
+      return this.resolve(
+        updatedId, //经过别名替换后的新路径（如 './module-a'）
+        importer, //发起引用的模块路径（如 'src/index.js'）
+        Object.assign({ skipSelf: true }, resolveOptions)  //{ skipSelf: true }：确保不会递归调用当前插件
+      ).then((resolved) => {
+        return resolved || { id: updatedId }
+        // null 没有插件能解析这个路径
+        // { id: 'resolved/path' }：解析成功对象
+        // string：解析后的路径（会自动转为 { id: string }）
+      })
+    }
+  }
+}
+
+// 辅助函数：规范化路径
+function normalizePath(path) {
+  // 处理 Windows 反斜杠
+  path = path.replace(/\\/g, '/')
+
+  // 处理相对路径
+  if (path.startsWith('./') || path.startsWith('../')) {
+    return path
+  }
+
+  // 确保非相对路径以 ./ 开头
+  return `./${path.replace(/^\.?\//, '')}`
+}
+
+```
+使用
+```js
+alias({
+  entries: [
+    { find: 'module-a', replacement: './module-a.js' }
+  ]
+})
+
+// 转换前（src/index.js）
+import a from 'module-a'
+
+// 转换后
+import a from './module-a.js'
+```
+工作流程：
+- 接收导入语句：遇到 import a from 'module-a'
+
+- 检查匹配规则：查找是否有配置 module-a 的别名
+
+- 路径替换：将 module-a 替换为 ./module-a.js
+
+- 二次解析：让其他插件处理新路径
+
+
+#### 3 resolveId 的三种返回值
+- 返回 null：不处理 下一个插件处理
+- 返回字符串：意思是路径就是这个，不用再找了（示例：直接返回 './module-a.js'）
+- 返回对象：：意思是路径在这，还有些额外信息（示例：{ id: './module-a.js', external: false }）
+
 
 ### 2.**load**
+- load 钩子就像是 Rollup 的"文件内容读取器"，根据模块路径(id)读取文件内容。
+
+```js
+import { readFileSync } from 'fs'
+import { extname } from 'path'
+
+// 支持的图片类型及其MIME类型
+const DEFAULT_MIME_TYPES = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp'
+}
+
+// 默认配置
+const DEFAULT_OPTIONS = {
+  dom: false,
+  exclude: undefined,
+  include: undefined,
+  mimeTypes: DEFAULT_MIME_TYPES
+}
+
+export default function image(opts = {}) {
+  const options = { ...DEFAULT_OPTIONS, ...opts }
+
+  return {
+    name: 'image',
+
+    load(id) {
+      try {
+        console.log('id', id)
+        // 1. 检查文件扩展名是否匹配
+        const ext = extname(id)
+        const mime = options.mimeTypes[ext]
+
+        console.log('ext', ext)
+
+        console.log('mime', mime)
+
+        // 如果不是图片类型，返回 null
+        if (!mime) return null
+
+        // 2. 检查包含/排除规则
+        if (options.exclude && options.exclude.test(id)) return null
+        if (options.include && !options.include.test(id)) return null
+
+        // 3. 读取文件内容
+        const isSvg = mime === 'image/svg+xml'
+        const format = isSvg ? 'utf-8' : 'base64'
+        const source = readFileSync(id, format).replace(/[\r\n]+/gm, '')
+
+        // 4. 生成Data URI
+        const dataUri = `data:${mime};${format},${source}`
+
+        // 5. 根据配置生成不同的导出代码
+        const code = options.dom ? generateDomCode(dataUri) : generateConstCode(dataUri)
+
+        return code.trim()
+      } catch (error) {
+        // 6. 错误处理
+        this.warn(`Failed to load image ${id}: ${error.message}`)
+        return null
+      }
+    }
+  }
+}
+
+// 生成DOM元素的代码
+function generateDomCode(dataUri) {
+  return `
+    var img = new Image();
+    img.src = '${dataUri}';
+    export default img;
+  `
+}
+
+// 生成常量导出的代码
+function generateConstCode(dataUri) {
+  return `export default '${dataUri}';`
+}
+
+```
+
+- resolveId：确定文件在哪
+
+- load：读取文件内容
+
+- transform：修改内容
+
 
 
 ### 3.**代码转换: transform**
-
 #### 1.transform 钩子是什么？
 
 
+transform 钩子就像是代码的"加工车间"，它的核心职责是：对已经加载的模块代码进行修改转换。
 
+
+
+
+#### 2. 以官方 replace 讲解
+配置
+```js
+// rollup.config.js
+import replace from '@rollup/plugin-replace'
+
+export default {
+  plugins: [
+    replace({
+      __VERSION__: '"1.0.0"',  // 替换为字符串 "1.0.0"
+      __DEV__: false           // 替换为布尔值 false
+    })
+  ]
+}
+```
+效果
+```js
+// 转换前代码
+if (__DEV__) {
+  console.log('Running version:', __VERSION__)
+}
+
+// 转换后代码
+if (false) {
+  console.log('Running version:', "1.0.0")
+}
+// 经过压缩后，这段代码会被完全移除
+```
+实现原理
+```js
+/**
+ * Rollup 替换插件 - 用于在打包过程中替换代码中的特定字符串
+ *
+ * 功能：
+ * 1. 在模块转换阶段(transform)执行字符串替换
+ * 2. 在生成chunk阶段(renderChunk)再次执行替换以确保全面性
+ * 3. 生成准确的sourcemap保持源码映射关系
+ */
+
+import MagicString from 'magic-string' // 专门用于高效操作字符串并生成 sourcemap的库
+
+function executeReplacement(code, id, options) {
+  const magicString = new MagicString(code)
+
+  Object.entries(options).forEach(([key, value]) => {
+    // 确保key是有效的标识符
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = new RegExp(escapedKey, 'g')
+    let match
+
+    while ((match = pattern.exec(code))) {
+      const start = match.index
+      const end = start + match[0].length
+      // 确保替换值是字符串，并处理引号情况
+      const stringValue =
+        typeof value === 'string'
+          ? value.startsWith('"') || value.startsWith("'")
+            ? value
+            : `'${value}'`
+          : JSON.stringify(value)
+
+      magicString.overwrite(start, end, stringValue)
+    }
+  })
+
+  return {
+    code: magicString.toString(),
+    map: magicString.generateMap()
+  }
+}
+
+export default function replace(options = {}) {
+  return {
+    name: 'replace',
+    transform(code, id) {
+      return executeReplacement(code, id, options)
+    },
+    renderChunk(code, chunk) {
+      return executeReplacement(code, chunk.fileName, options)
+    }
+  }
+}
+
+
+
+
+```
+
+#### 3. transform 钩子的关键特性
+##### 1. 串行处理
+```js
+plugins: [
+  pluginA(), // 先执行
+  pluginB(), // 后执行
+  pluginC()  // 最后执行
+]
+```
+##### 2. 三种返回值：
+- 返回对象：必须包含 code 属性 `return { code: '新代码', map: sourceMap }`
+- 返回null：跳过当前插件处理`if (不满足条件) return null`
+- 返回字符串：简写形式`return '新代码'`
+
+##### 3.SourceMap支持：
+```js
+// 使用MagicString可以自动生成SourceMap
+const magicString = new MagicString(code)
+magicString.overwrite(20, 25, '替换内容')
+return {
+  code: magicString.toString(),
+  map: magicString.generateMap()
+}
+```
 
 
 ###  4.**Chunk 级代码修改: renderChunk**
+
+### 1.什么是 renderChunk 钩子？
+renderChunk 在 Rollup 处理完所有模块转换（transform）之后、生成最终输出文件之前被调用。
+这个钩子允许你对即将输出的代码块（chunk）进行最后的修改。
+
+### 2.为什么需要 renderChunk？
+- 最终处理机会：在所有 transform 完成后，对代码做最后的修改
+
+- 全局视角：可以访问整个 chunk 的代码，而不仅是单个模块
+### 3.基本语法
+```js
+renderChunk(code, chunk) {
+  // code: 当前 chunk 的代码内容
+  // chunk: chunk 的元信息对象
+  return {
+    code: '修改后的代码',
+    map: {...} // 可选的 sourcemap
+  }
+}
+```
+### 4.eg
+```js
+export default function replace(options = {}) {
+  // 存储替换规则
+  const replacements = options.replacements || {}
+
+  // 执行替换的函数
+  function executeReplacement(code, id) {
+    let result = code
+    for (const [key, value] of Object.entries(replacements)) {
+      result = result.replace(new RegExp(key, 'g'), value)
+    }
+    return result
+  }
+
+  return {
+    name: 'replace',
+
+    // 在单个模块转换时执行替换
+    transform(code, id) {
+      return executeReplacement(code, id)
+    },
+
+    // 在所有模块转换完成后，再次执行替换
+    renderChunk(code, chunk) {
+      const id = chunk.fileName
+      console.log(`处理 chunk: ${id}`)
+
+      // 可以访问 chunk 的完整信息
+      console.log(`包含的模块: ${chunk.moduleIds.join(', ')}`)
+
+      // 执行最终替换
+      return {
+        code: executeReplacement(code, id),
+        map: null // 这里简化处理，不生成 sourcemap
+      }
+    }
+  }
+}
+```
+
+代码优化
+```js
+renderChunk(code) {
+  return code.replace(/console\.debug\(.*?\);/g, '')
+}
+```
+chunk 参数包含丰富的元信息，常用属性包括：
+
+fileName: 输出文件名
+
+modules: 包含的所有模块及其信息
+
+imports/exports: 导入导出的模块
+
+isEntry: 是否是入口 chunk
+
+facadeModuleId: 入口模块 ID
+
+特性	transform	renderChunk
+调用时机	单个模块加载时	所有模块转换完成后
+处理范围	单个模块	整个 chunk (可能多个模块)
+使用场景	模块级转换	chunk 级最终处理
+访问信息	当前模块信息	整个 chunk 的元信息
 
 
 ### 5.**产物生成最后一步: generateBundle**
