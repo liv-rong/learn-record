@@ -203,6 +203,13 @@ export default function imagePlugin() {
 
 #### 2.3.2 各阶段详解
 
+- config： 返回一个被合并到现在的配置一个对象
+- configResolved：获取最终的一个配置对象
+- configureServer：用于配置开发服务器的钩子，用于监听文件系统，搭建websocket通讯
+- configurePreviewServer：与 configureServer 类似，但是会在内部中间件注入后调用
+- transformIndexHtml：转换 index.html 的专用钩子
+- handleHotUpdate：执行自定义 HMR 更新处理
+
 ##### 1.启动阶段
 ```js
 // vite-plugin-test.ts
@@ -606,6 +613,44 @@ export default function App() {
 - JSX转换：使用esbuild将JSX转换为浏览器可执行代码
 
 
+### 2.自定引入ant 组件 并且给组件加前缀
+1.自动引入
+
+autoImport
+
+
+
+### 3.文件路由插件 类似next
+
+
+```ts
+export default function fileRoutePlugin(): Plugin {
+  return {
+    name: 'vite-plugin-file-route',
+    configureServer(server) {
+      // 监听文件变化
+      server.watcher.on('change', (file) => {
+        if (file.includes('pages/')) {
+          // 重新生成路由
+        }
+      })
+    },
+    resolveId(id) {
+      if (id === 'virtual:routes') {
+        return '\0virtual:routes'
+      }
+    },
+    load(id) {
+      if (id === '\0virtual:routes') {
+        return generateRoutes()
+      }
+    }
+  }
+}
+```
+
+
+### 4. 虚拟模块插件
 
 
 
