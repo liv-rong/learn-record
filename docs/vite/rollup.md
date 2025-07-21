@@ -1,6 +1,6 @@
 # 1. Rollup
 - 是一款基于 ES Module 模块规范实现的 JS 打包工具
-
+Rollup 是一个用于 JavaScript 的模块打包工具
 ## 2.安装
 ```ts
 pnpm i rollup
